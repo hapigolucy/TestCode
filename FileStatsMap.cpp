@@ -41,9 +41,9 @@ public:
     }
 };
 
-class FdsFileStats {
+class FileStats {
 public:
-    FdsFileStats(const std::map<MyClass, MyValue>& data) {}
+    FileStats(const std::map<MyClass, MyValue>& data) {}
 
     int GetTotalCount() const {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -84,4 +84,4 @@ private:
     mutable std::mutex mutex_;
 };
 
-std::map<MyClass, MyValue> FdsFileStats::data_;
+std::map<MyClass, MyValue> FileStats::data_;
