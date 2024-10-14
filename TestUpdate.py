@@ -1,3 +1,5 @@
+DAYS_SINCE_ROTATION=$(( ( $(date +%s) - $(date -d "$LAST_ROTATION_DATE" +%s) ) / 86400 ))
+
 import os
 from datetime import datetime, timedelta
 import subprocess
