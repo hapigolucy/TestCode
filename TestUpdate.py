@@ -1,5 +1,13 @@
 DAYS_SINCE_ROTATION=$(( ( $(date +%s) - $(date -d "$LAST_ROTATION_DATE" +%s) ) / 86400 ))
 
+# Check if today is a Saturday and if 300+ days have passed
+if [ "$DAYS_SINCE_ROTATION" -ge 300 ] && [ "$(date +%u)" -eq 6 ]; then
+    rotate_passwords
+else
+    echo "Password rotation not needed today."
+fi
+
+
 import os
 from datetime import datetime, timedelta
 import subprocess
