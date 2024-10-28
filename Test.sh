@@ -1,94 +1,47 @@
 #!/bin/bash
 
-# Function to display usage information
-usage() {
-    echo "Usage: $0 'account1|platform1|domain1|server1' ['account2|platform2|domain2|server2' ...]"
-    echo "   or: $0 -f <file>"
-    exit 1
-}
+# Database connection details
+DB_HOST="your_db_host"
+DB_PORT="your_db_port"
+DB_USER="your_db_user"
+DB_PASS="your_db_password"
+DB_NAME="your_db_name"
 
-# Function to process a single set of arguments
-process_args() {
-    local arg_set="$1"
+# API details
+API_URL="https://your_api_endpoint.com/upload"
 
-    # Split the pipe-separated values into an array
-    IFS='|' read -r -a params <<< "$arg_set"
+# Calculate yesterday's date and adjust for weekends
+YESTERDAY=$(date -d "yesterday" +%Y%m%d)
+DAY_OF_WEEK=$(date -d "yesterday" +%u)
 
-    # Check if we have exactly 4 parameters
-    if [ ${#params[@]} -ne 4 ]; then
-        echo "Invalid argument set: $arg_set"
-        usage
-    fi
-
-    account_name="${params[0]}"
-    platform="${params[1]}"
-    domain="${params[2]}"
-    server_name="${params[3]}"
-
-    echo "Running PassMgr with:"
-    echo "  Account Name: ${account_name}"
-    echo "  Platform: ${platform}"
-    echo "  Domain: ${domain}"
-    echo "  Server Name: ${server_name}"
-
-    # Call the PassMgr binary with the provided arguments
-    ./PassMgr -accountName "${account_name}" -platform "${platform}" -domain "${domain}" -serverName "${server_name}"
-
-    # Check the exit status of the PassMgr call
-    if [ $? -eq 0 ]; then
-        echo "PassMgr executed successfully for account ${account_name}."
-    else
-        echo "PassMgr execution failed for account ${account_name}."
-    fi
-}
-
-# Check if the first argument is '-f' indicating a file input
-if [ "$1" == "-f" ]; then
-    if [ -z "$2" ]; then
-        usage
-    fi
-
-    input_file="$2"
-
-    if [ ! -f "$input_file" ]; then
-        echo "File not found: $input_file"
-        exit 1
-    fi
-
-    # Read the file line by line and process each line as arguments
-    while IFS= read -r line; do
-        process_args "$line"
-    done < "$input_file"
-else
-    # Check if at least one argument is provided
-    if [ $# -lt 1 ]; then
-        usage
-    fi
-
-    # Process each argument set
-    for arg_set in "$@"; do
-        process_args "$arg_set"
-    done
+# If yesterday was Saturday (6), use Friday; if Sunday (7), also use Friday
+if [[ "$DAY_OF_WEEK" -eq 6 ]]; then
+    YESTERDAY=$(date -d "2 days ago" +%Y%m%d)
+elif [[ "$DAY_OF_WEEK" -eq 7 ]]; then
+    YESTERDAY=$(date -d "3 days ago" +%Y%m%d)
 fi
 
-# Call abc.sh after the loop completes
-./abc.sh
+# Create the rid range
+RID_MIN="${YESTERDAY}00"
+RID_MAX="${YESTERDAY}99"
 
-# Check the exit status of the abc.sh call
-if [ $? -eq 0 ]; then
-    echo "abc.sh executed successfully."
-else
-    echo "abc.sh execution failed."
+# SQL query to fetch the number
+SQL_QUERY="SELECT your_number_column FROM your_table WHERE rid > ${RID_MIN} AND rid < ${RID_MAX};"
+
+# Execute the SQL query and fetch the result
+# Using 'psql' as an example for PostgreSQL. Modify this part according to your database type.
+RESULT=$(PGPASSWORD=$DB_PASS psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -c "$SQL_QUERY")
+
+# Remove leading/trailing whitespace
+RESULT=$(echo "$RESULT" | xargs)
+
+# Check if RESULT is empty
+if [[ -z "$RESULT" ]]; then
+    echo "No result found for the given query."
     exit 1
 fi
 
-# Call xyz.sh after abc.sh completes
-./xyz.sh
+# Make the REST API call with curl to upload the result
+curl -X POST "$API_URL" -H "Content-Type: application/json" -d "{\"result\": \"$RESULT\"}"
 
-# Check the exit status of the xyz.sh call
-if [ $? -eq 0 ]; then
-    echo "xyz.sh executed successfully."
-else
-    echo "xyz.sh execution failed."
-    exit 1
-fi
+echo "Result uploaded successfully: $RESULT"
